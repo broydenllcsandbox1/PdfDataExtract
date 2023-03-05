@@ -1,3 +1,11 @@
+/*
+ * Michael Morrison: March 4, 2023
+ * 
+ * Application written for EastBay Publishing to allow for automated extraction of PDF data using AWS tools
+ * and infrastructure.
+ * 
+ */
+
 package com.broyden;
 
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
