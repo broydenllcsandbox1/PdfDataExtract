@@ -10,12 +10,18 @@ import software.amazon.awssdk.services.textract.model.DetectDocumentTextResponse
 import software.amazon.awssdk.services.textract.model.Block;
 import software.amazon.awssdk.services.textract.model.DocumentMetadata;
 import software.amazon.awssdk.services.textract.model.TextractException;
+import software.amazon.awssdk.services.textract.model.FeatureType;
+import software.amazon.awssdk.services.textract.model.AnalyzeDocumentRequest;
+import software.amazon.awssdk.services.textract.model.AnalyzeDocumentResponse;
+import software.amazon.awssdk.services.textract.model.Query;
+import software.amazon.awssdk.services.textract.model.QueriesConfig;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ArrayList;
 
 
 public class Handler {
@@ -28,7 +34,73 @@ public class Handler {
     public void sendRequest() {
         // TODO: invoking the api calls using textractClient.
         System.out.println("!!!BROYDEN TEXTRACT EXAMPLE@@@");
-        detectDocText(textractClient, "/broyden/data_files/page_9_out.pdf");
+        //detectDocText(textractClient, "/broyden/data_files/page_9_out.pdf");
+        analyzeDoc(textractClient, "/broyden/data_files/page_19_out.pdf");
+    }
+
+    public static void analyzeDoc(TextractClient textractClient, String sourceDoc) {
+
+        try {
+            InputStream sourceStream = new FileInputStream(new File(sourceDoc));
+            SdkBytes sourceBytes = SdkBytes.fromInputStream(sourceStream);
+
+            // Get the input Document object as bytes
+            Document myDoc = Document.builder()
+                    .bytes(sourceBytes)
+                    .build();
+
+            List<FeatureType> featureTypes = new ArrayList<FeatureType>();
+            featureTypes.add(FeatureType.QUERIES);
+            featureTypes.add(FeatureType.FORMS);
+            featureTypes.add(FeatureType.TABLES);
+
+            List<Query> queries = new ArrayList<Query>();
+            Query query1 = Query.builder()
+                    .text("who is the check TO THE ORDER OF?")
+                    .build();
+
+            Query query2 = Query.builder()
+                    .text("who is the check made out to?")
+                    .build();
+
+            Query query3 = Query.builder()
+                    .text("what is the R/T Number?")
+                    .build();
+
+            queries.add(query1);
+            queries.add(query2);
+            queries.add(query3);
+
+            QueriesConfig queriesConfig = QueriesConfig.builder()
+                    .queries(queries)
+                    .build();
+
+            AnalyzeDocumentRequest analyzeDocumentRequest = AnalyzeDocumentRequest.builder()
+                    .featureTypes(featureTypes)
+                    .document(myDoc)
+                    .queriesConfig(queriesConfig)
+                    .build();
+
+            AnalyzeDocumentResponse analyzeDocument = textractClient.analyzeDocument(analyzeDocumentRequest);
+            List<Block> docInfo = analyzeDocument.blocks();
+            Iterator<Block> blockIterator = docInfo.iterator();
+
+            while(blockIterator.hasNext()) {
+                Block block = blockIterator.next();
+                String type = block.blockType().toString();
+                if (type == "QUERY_RESULT") {
+                    System.out.println("The block type is " +block.blockType().toString());
+                    System.out.println(block.query().text());
+                    System.out.println(block.text());
+                    System.out.println("  ");
+                }
+            }
+
+        } catch (TextractException | FileNotFoundException e) {
+
+            System.err.println(e.getMessage());
+            System.exit(1);
+        }
     }
 
     public static void detectDocText(TextractClient textractClient,String sourceDoc) {
