@@ -74,11 +74,27 @@ public class Handler {
          }
     }
 
+    private static String val(ValueConfidence vc) {
+        if (vc == null) {
+            return "null";
+        }
+
+        return vc.getValue();
+    }
+
+    private static String conf(ValueConfidence vc) {
+        if (vc == null) {
+            return "null";
+        }
+
+        return vc.getConfidence();
+    }
+
     private static void WriteValuesToFile(String file, ValueConfidence checkNumber, ValueConfidence name, ValueConfidence amount, ValueConfidence date, String fileName) {
         try {
             FileWriter fw = new FileWriter(file, true);
             BufferedWriter bw = new BufferedWriter(fw);
-            bw.write(checkNumber.getValue() + "," + name.getValue() + ",\"" + amount.getValue() + "\"," + date.getValue()+ "," + fileName + "," + checkNumber.getConfidence() + "," + name.getConfidence() + "," + amount.getConfidence() + "," + date.getConfidence());
+            bw.write(val(checkNumber) + "," + val(name) + ",\"" + val(amount) + "\"," + val(date)+ "," + fileName + "," + conf(checkNumber) + "," + conf(name) + "," + conf(amount) + "," + conf(date));
             bw.newLine();
             bw.close();
         } catch (IOException e) {
