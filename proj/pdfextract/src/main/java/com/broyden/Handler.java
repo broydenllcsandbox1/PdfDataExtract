@@ -8,6 +8,7 @@
 
 package com.broyden;
 
+import com.broyden.ValueConfidence;
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.regions.Region;
@@ -56,27 +57,28 @@ public class Handler {
 
         File directoryPath = new File("/broyden/data_files/");
         File filesList[] = directoryPath.listFiles();
+        //filesList = new File[] {new File("/broyden/data_files/page_32_out.pdf")};
         int totalFiles = filesList.length;
         int counter = 1;
         for(File file : filesList) {
             System.out.println("File name: "+file.getName());
             System.out.println(counter++ + " of " + totalFiles);
-            HashMap<String, String> results = analyzeDoc(textractClient, file.getAbsolutePath(), queries);
+            HashMap<String, ValueConfidence> results = analyzeDoc(textractClient, file.getAbsolutePath(), queries);
             
-            String checkNumber = results.get(fields.get("CheckNumber"));
-            String name = results.get(fields.get("Name"));
-            String amount = results.get(fields.get("Amount"));
-            String date = results.get(fields.get("Date"));
+            ValueConfidence checkNumber = results.get(fields.get("CheckNumber"));
+            ValueConfidence name = results.get(fields.get("Name"));
+            ValueConfidence amount = results.get(fields.get("Amount"));
+            ValueConfidence date = results.get(fields.get("Date"));
 
-            //WriteValuesToFile(outputFile, checkNumber, name, amount, date, file.getName());
+            WriteValuesToFile(outputFile, checkNumber, name, amount, date, file.getName());
          }
     }
 
-    private static void WriteValuesToFile(String file, String checkNumber, String name, String amount, String date, String fileName) {
+    private static void WriteValuesToFile(String file, ValueConfidence checkNumber, ValueConfidence name, ValueConfidence amount, ValueConfidence date, String fileName) {
         try {
             FileWriter fw = new FileWriter(file, true);
             BufferedWriter bw = new BufferedWriter(fw);
-            bw.write(checkNumber + "," + name + "," + amount + "," + date + "," + fileName);
+            bw.write(checkNumber.getValue() + "," + name.getValue() + ",\"" + amount.getValue() + "\"," + date.getValue()+ "," + fileName + "," + checkNumber.getConfidence() + "," + name.getConfidence() + "," + amount.getConfidence() + "," + date.getConfidence());
             bw.newLine();
             bw.close();
         } catch (IOException e) {
@@ -85,8 +87,8 @@ public class Handler {
         }
     }
 
-    public static HashMap<String, String> analyzeDoc(TextractClient textractClient, String sourceDoc, List<String> queryList) {
-        HashMap<String, String> map = new HashMap<String, String>();
+    public static HashMap<String, ValueConfidence> analyzeDoc(TextractClient textractClient, String sourceDoc, List<String> queryList) {
+        HashMap<String, ValueConfidence> map = new HashMap<String, ValueConfidence>();
 
         try {
             InputStream sourceStream = new FileInputStream(new File(sourceDoc));
@@ -128,24 +130,16 @@ public class Handler {
                 Block block = blockIterator.next();
                 String type = block.blockType().toString();
                 if (type == "QUERY") {
-                    // System.out.println("The block type is " +block.blockType().toString());
-                    // System.out.println("The block id is " +block.id());
-                    // System.out.println("has relationships " +block.hasRelationships());
-                    //System.out.println(block.query().text());
                     List<Relationship> relationships = block.relationships();
-                    //System.out.println("relationship count: " + relationships.size());
                     for (Relationship relationship : relationships) {
                         List<String> relatedBlockIds = relationship.ids();
                         String relatedBlockId = relatedBlockIds.get(0);
-                        //System.out.println("The block ids are " + relatedBlockIds);
                         Block relatedBlock = docInfo.stream()
                                                 .filter(item -> relatedBlockId.equals(item.id()))
                                                 .findAny()
                                                 .orElse(null);
-                        //System.out.println(block.query().text() + ": " + relatedBlock.text());
-                        map.put(block.query().text(), relatedBlock.text());
+                        map.put(block.query().text(), new ValueConfidence(relatedBlock.text(), relatedBlock.confidence()));
                     }
-                    //System.out.println("  ");
                 }
             }
 
